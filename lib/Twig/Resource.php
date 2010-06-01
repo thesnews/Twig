@@ -46,7 +46,17 @@ abstract class Twig_Resource
     {
         $item = (string) $item;
 
-        if ((is_array($object) || is_object($object) && $object instanceof ArrayAccess) && isset($object[$item])) {
+		/*
+			2010-05-17
+			added hack to allow access to overloaded __foo() methods which act
+			as properties in foundry models
+		*/
+		if ((is_array($object) || is_object($object) && $object instanceof \foundry\model) && $object->$item)
+		{
+		  return $object->$item;
+		}
+
+      if ((is_array($object) || is_object($object) && $object instanceof ArrayAccess) && isset($object[$item])) {
             return $object[$item];
         }
 
