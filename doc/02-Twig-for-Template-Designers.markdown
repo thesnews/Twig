@@ -104,6 +104,11 @@ If a variable or attribute does not exist you will get back a `null` value
 >     [twig]
 >     foo[bar]
 
+Twig always references two special variables (mostly useful for macros):
+
+ * `_self`: references the current template;
+ * `_context`: references the current context.
+
 Filters
 -------
 
@@ -187,7 +192,6 @@ document that you might use for a simple two-column page. It's the job of
     [twig]
     <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
     <html lang="en">
-    <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
       {% block head %}
         <link rel="stylesheet" href="style.css" />
@@ -202,6 +206,7 @@ document that you might use for a simple two-column page. It's the job of
         {% endblock %}
       </div>
     </body>
+    </html>
 
 In this example, the `{% block %}` tags define four blocks that child
 templates can fill in. All the `block` tag does is to tell the template engine
@@ -311,7 +316,34 @@ following constructs do the same:
 -
 
     [twig]
-    {% block title as page_title|title %}
+    {% block title page_title|title %}
+
+### Dynamic Inheritance (as of Twig 0.9.7)
+
+Twig supports dynamic inheritance by using a variable as the base template:
+
+    [twig]
+    {% extends some_var %}
+
+If the variable evaluates to a `Twig_Template` object, Twig will use it as the
+parent template:
+
+    // {% extends layout %}
+
+    $layout = $twig->loadTemplate('some_layout_template.twig');
+
+    $twig->display('template.twig', array('layout' => $layout));
+
+### Conditional Inheritance (as of Twig 0.9.7)
+
+As a matter of fact, the template name can be any valid expression. So, it's
+also possible to make the inheritance mechanism conditional:
+
+    [twig]
+    {% extends standalone ? "minimum.html" : "base.html" %}
+
+In this example, the template will extend the "minimum.html" layout template
+if the `standalone` variable evaluates to `true`, and "base.html" otherwise.
 
 Import Context Behavior
 -----------------------
@@ -467,6 +499,13 @@ for a small speed boost):
 | `loop.parent`         | The parent context
 
 >**NOTE**
+>The `loop.length`, `loop.revindex`, `loop.revindex0`, and `loop.last`
+>variables are only available for PHP arrays, or objects that implement the
+>`Countable` interface (as of Twig 0.9.7).
+
+-
+
+>**NOTE**
 >Unlike in PHP it's not possible to `break` or `continue` in a loop.
 
 If no iteration took place because the sequence was empty, you can render a
@@ -535,7 +574,7 @@ more complex `expressions` there too:
 ### Macros
 
 Macros are comparable with functions in regular programming languages. They
-are useful to put often used HTML idioms into reusable functions to not repeat
+are useful to put often used HTML idioms into reusable elements to not repeat
 yourself.
 
 Here a small example of a macro that renders a form element:
@@ -555,8 +594,12 @@ Macros differs from native PHP functions in a few ways:
 But as PHP functions, macros don't have access to the current template
 variables.
 
-Macros can be defined in any template, and always need to be "imported" before
-being used (see the Import section for more information):
+>**TIP**
+>You can pass the whole context as an argument by using the special `_context`
+>variable.
+
+Macros can be defined in any template, and need to be "imported" before being
+used (see the Import section for more information):
 
     [twig]
     {% import "forms.html" as forms %}
@@ -570,6 +613,44 @@ The macro can then be called at will:
     [twig]
     <p>{{ forms.input('username') }}</p>
     <p>{{ forms.input('password', none, 'password') }}</p>
+
+If the macros are defined and used in the same template, you can use the
+special `_self` variable, without importing them:
+
+    [twig]
+    <p>{{ _self.input('username') }}</p>
+
+When you want to use a macro in another one from the same file, use the `_self`
+variable:
+
+    [twig]
+    {% macro input(name, value, type, size) %}
+      <input type="{{ type|default('text') }}" name="{{ name }}" value="{{ value|e }}" size="{{ size|default(20) }}" />
+    {% endmacro %}
+
+    {% macro wrapped_input(name, value, type, size) %}
+        <div class="field">
+            {{ _self.input(name, value, type, size) }}
+        </div>
+    {% endmacro %}
+
+When the macro is defined in another file, you need to import it:
+
+    [twig]
+    {# forms.html #}
+
+    {% macro input(name, value, type, size) %}
+      <input type="{{ type|default('text') }}" name="{{ name }}" value="{{ value|e }}" size="{{ size|default(20) }}" />
+    {% endmacro %}
+
+    {# shortcuts.html #}
+
+    {% macro wrapped_input(name, value, type, size) %}
+        {% import "forms.html" as forms %}
+        <div class="field">
+            {{ forms.input(name, value, type, size) }}
+        </div>
+    {% endmacro %}
 
 ### Filters
 
@@ -596,15 +677,15 @@ Inside code blocks you can also assign values to variables. Assignments use
 the `set` tag and can have multiple targets:
 
     [twig]
-    {% set foo as 'foo' %}
+    {% set foo = 'foo' %}
 
-    {% set foo as [1, 2] %}
+    {% set foo = [1, 2] %}
 
-    {% set foo as ['foo': 'bar] %}
+    {% set foo = ['foo': 'bar'] %}
 
-    {% set foo as 'foo' ~ 'bar' %}
+    {% set foo = 'foo' ~ 'bar' %}
 
-    {% set foo, bar as 'foo', 'bar' %}
+    {% set foo, bar = 'foo', 'bar' %}
 
 The `set` tag can also be used to 'capture' chunks of HTML (new in Twig
 0.9.6):
@@ -621,7 +702,7 @@ The `set` tag can also be used to 'capture' chunks of HTML (new in Twig
 The `extends` tag can be used to extend a template from another one. You can
 have multiple of them in a file but only one of them may be executed at the
 time. There is no support for multiple inheritance. See the section about
-Template inheritance above.
+Template inheritance above for more information.
 
 ### Block
 
@@ -641,12 +722,6 @@ rendered contents of that file into the current namespace:
 
 Included templates have access to the variables of the active context.
 
-An included file can be evaluated in the sandbox environment by appending
-`sandboxed` at the end if the `escaper` extension has been enabled:
-
-    [twig]
-    {% include 'user.html' sandboxed %}
-
 You can also restrict the variables passed to the template by explicitly pass
 them as an array:
 
@@ -656,15 +731,29 @@ them as an array:
     {% set vars as ['foo': 'bar'] %}
     {% include 'foo' with vars %}
 
-The most secure way to include a template is to use both the `sandboxed` mode,
-and to pass the minimum amount of variables needed for the template to be
-rendered correctly:
-
-    [twig]
-    {% include 'foo' sandboxed with vars %}
-
 >**NOTE**
 >The `with` keyword is supported as of Twig 0.9.5.
+
+-
+
+>**TIP**
+>When including a template created by an end user, you should consider
+>sandboxing it. More information in the "Twig for Developers" chapter.
+
+The template name can be any valid Twig expression:
+
+    [twig]
+    {% include some_var %}
+    {% include ajax ? 'ajax.html' : 'not_ajax.html' %}
+
+And if the variable evaluates to a `Twig_Template` object, Twig will use it
+directly:
+
+    // {% include template %}
+
+    $template = $twig->loadTemplate('some_template.twig');
+
+    $twig->display('template.twig', array('template' => $template));
 
 ### Import
 
@@ -686,6 +775,7 @@ Importing these macros in a template is as easy as using the `import` tag:
 
     [twig]
     {% import 'forms.html' as forms %}
+
     <dl>
       <dt>Username</dt>
       <dd>{{ forms.input('username') }}</dd>
@@ -694,8 +784,8 @@ Importing these macros in a template is as easy as using the `import` tag:
     </dl>
     <p>{{ forms.textarea('comment') }}</p>
 
-Even if the macros are defined in the same template as the one where you want
-to use them, they still need to be imported:
+Importing is not needed if the macros and the template are defined in the file;
+use the special `_self` variable instead:
 
     [twig]
     {# index.html template #}
@@ -704,7 +794,18 @@ to use them, they still need to be imported:
       <textarea name="{{ name }}" rows="{{ rows|default(10) }}" cols="{{ cols|default(40) }}">{{ value|e }}</textarea>
     {% endmacro %}
 
-    {% import "index.html" as forms %}
+    <p>{{ _self.textarea('comment') }}</p>
+
+But you can still create an alias by importing from the `_self` variable:
+
+    [twig]
+    {# index.html template #}
+
+    {% macro textarea(name, value, rows) %}
+      <textarea name="{{ name }}" rows="{{ rows|default(10) }}" cols="{{ cols|default(40) }}">{{ value|e }}</textarea>
+    {% endmacro %}
+
+    {% import _self as forms %}
 
     <p>{{ forms.textarea('comment') }}</p>
 
@@ -732,8 +833,12 @@ When the `i18n` extension is enabled, use the `trans` block to mark parts in
 the template as translatable:
 
     [twig]
+    {% trans "Hello World!" %}
+
+    {% trans string_var %}
+
     {% trans %}
-    Hello World!
+        Hello World!
     {% endtrans %}
 
 >**CAUTION**
@@ -744,8 +849,11 @@ In a translatable string, you can embed variables:
 
     [twig]
     {% trans %}
-    Hello {{ name }}!
+        Hello {{ name }}!
     {% endtrans %}
+
+>**NOTE**
+>`{% trans "Hello {{ name }}!" %}` is not a valid statement.
 
 If you need to apply filters to the variables, you first need to assign the
 result to a variable:
@@ -754,21 +862,21 @@ result to a variable:
     {% set name as name|capitalize %}
 
     {% trans %}
-    Hello {{ name }}!
+        Hello {{ name }}!
     {% endtrans %}
 
 To pluralize a translatable string, use the `plural` block:
 
     [twig]
-    {% trans apple_count %}
-    Hey {{ name }}, I have one apple.
-    {% plural %}
-    Hey {{ name }}, I have {{ count }} apples.
+    {% trans %}
+        Hey {{ name }}, I have one apple.
+    {% plural apple_count %}
+        Hey {{ name }}, I have {{ count }} apples.
     {% endtrans %}
 
-The `trans` block first argument is the `count` used to select the right
-string. Within the translatable string, the special `count` variable always
-contain the count value (here the value of `apple_count`).
+The `plural` tag should provide the `count` used to select the right string.
+Within the translatable string, the special `count` variable always contain
+the count value (here the value of `apple_count`).
 
 Expressions
 -----------
@@ -802,10 +910,12 @@ exist:
    writing the number down. If a dot is present the number is a float,
    otherwise an integer.
 
- * `[foo, bar]`: Arrays are defined by a sequence of expressions separated by
-   a comma (`,`) and wrapped with squared brackets (`[]`). As an array element
-   can be any valid expression, arrays can be nested. The array notation is
-   only available as of Twig 0.9.5.
+ * `[foo, bar]` (new in Twig 0.9.5): Arrays are defined by a sequence of
+   expressions separated by a comma (`,`) and wrapped with squared brackets
+   (`[]`). As an array element can be any valid expression, arrays can be
+   nested. Like PHP, arrays can also have named items (hashes) like `['foo':
+   'foo', 'bar': 'bar']`. You can even mix and match both syntaxes: `['foo':
+   'foo', 'bar']`.
 
  * `true` / `false` / `none`: `true` represents the true value, `false`
    represents the false value.
@@ -946,9 +1056,9 @@ The array can contain any number of values:
       {{ fruits|cycle(i) }}
     {% endfor %}
 
-### `encoding`
+### `urlencode`
 
-The `encoding` filter URL encode a given string.
+The `urlencode` filter URL encode a given string.
 
 ### `title`
 

@@ -96,9 +96,7 @@ The following options are available:
  * `strict_variables` (new in Twig 0.9.7): If set to `false`, Twig will
    silently ignore invalid variables (variables and or attributes/methods that
    do not exist) and replace them with a `null` value. When set to `true`,
-   Twig throws an exception instead. If you don't provide a value for the
-   `strict_variables` option, it will be determined automatically based on the
-   `debug` value.
+   Twig throws an exception instead (default to `false`).
 
 >**CAUTION**
 >Before Twig 0.9.3, the `cache` and `auto_reload` options did not exist. They
@@ -266,6 +264,10 @@ The `core` extension defines all the core features of Twig:
      * `parent`
      * `display`
      * `filter`
+     * `macro`
+     * `import`
+     * `set`
+     * `debug`
 
   * Filters:
 
@@ -283,6 +285,9 @@ The `core` extension defines all the core features of Twig:
      * `reverse`
      * `length`
      * `sort`
+     * `in`
+     * `range`
+     * `cycle`
      * `default`
      * `keys`
      * `items`
@@ -389,10 +394,12 @@ The policy object is the first argument of the sandbox constructor:
     $twig->addExtension($sandbox);
 
 By default, the sandbox mode is disabled and should be enabled when including
-untrusted templates:
+untrusted template code by using the `sandbox` tag:
 
-    [php]
-    {% include "user.html" sandboxed %}
+    [twig]
+    {% sandbox %}
+      {% include 'user.html' %}
+    {% endsandbox %}
 
 You can sandbox all templates by passing `true` as the second argument of the
 extension constructor:

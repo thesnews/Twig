@@ -1,18 +1,53 @@
-* 0.9.7-DEV
+* 0.9.9
 
 Backward incompatibilities:
- * The short notation of the `block` tag changed.
+ * the self special variable has been renamed to _self
 
- * fixed iterator_to_array() usage
+ * fixed inheritance
+ * added the special _context variable to reference the current context
+ * renamed self to _self (to avoid conflict)
+ * fixed Twig_Template::getAttribute() for protected properties
+
+* 0.9.8 (2010-06-28)
+
+Backward incompatibilities:
+ * the trans tag plural count is now attached to the plural tag:
+    old: `{% trans count %}...{% plural %}...{% endtrans %}`
+    new: `{% trans %}...{% plural count %}...{% endtrans %}`
+
+ * added a way to translate strings coming from a variable ({% trans var %})
+ * fixed trans tag when used with the Escaper extension
+ * fixed default cache umask
+ * removed Twig_Template instances from the debug tag output
+ * fixed objects with __isset() defined
+ * fixed set tag when used with a capture
+ * fixed type hinting for Twig_Environment::addFilter() method
+
+* 0.9.7 (2010-06-12)
+
+Backward incompatibilities:
+ * changed 'as' to '=' for the set tag ({% set title as "Title" %} must now be {% set title = "Title" %})
+ * removed the sandboxed attribute of the include tag (use the new sandbox tag instead)
+ * refactored the Node system (if you have custom nodes, you will have to update them to use the new API)
+
+ * added self as a special variable that refers to the current template (useful for importing macros from the current template)
+ * added Twig_Template instance support to the include tag
+ * added support for dynamic and conditional inheritance ({% extends some_var %} and {% extends standalone ? "minimum" : "base" %})
+ * added a grammar sub-framework to ease the creation of custom tags
+ * fixed the for tag for large arrays (some loop variables are now only available for arrays and objects that implement the Countable interface)
+ * removed the Twig_Resource::resolveMissingFilter() method
+ * fixed the filter tag which did not apply filtering to included files
+ * added a bunch of unit tests
+ * added a bunch of phpdoc
+ * added a sandbox tag in the sandbox extension
  * changed the date filter to support any date format supported by DateTime
- * added strict_variable setting to throw an exception when an invalid variable is used in a template (disabled by default when debug is false)
+ * added strict_variable setting to throw an exception when an invalid variable is used in a template (disabled by default)
  * added the lexer, parser, and compiler as arguments to the Twig_Environment constructor
  * changed the cache option to only accepts an explicit path to a cache directory or false
  * added a way to add token parsers, filters, and visitors without creating an extension
  * added three interfaces: Twig_NodeInterface, Twig_TokenParserInterface, and Twig_FilterInterface
  * changed the generated code to match the new coding standards
  * fixed sandbox mode (__toString() method check was not enforced if called implicitly from a simple statement like {{ article }})
- * added a 'as' string to the block tag short notation ({% block title "Title" %} must now be {% block title as "Title" %})
  * added an exception when a child template has a non-empty body (as it is always ignored when rendering)
 
 * 0.9.6 (2010-05-12)

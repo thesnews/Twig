@@ -2,7 +2,7 @@ Extending Twig
 ==============
 
 Twig supports extensions that can add extra tags, filters, or even extend the
-parser itself with node transformer classes. The main motivation for writing
+parser itself with node visitor classes. The main motivation for writing
 an extension is to move often used code into a reusable class like adding
 support for internationalization.
 
@@ -12,6 +12,17 @@ to host all the specific tags and filters you want to add to Twig.
 >**NOTE**
 >Before writing your own extensions, have a look at the Twig official extension
 >repository: http://github.com/fabpot/Twig-extensions.
+
+Extending without an Extension (new in Twig 0.9.7)
+--------------------------------------------------
+
+If you just need to register a small amount of tags and/or filters, you can
+register them without creating an extension:
+
+    [php]
+    $twig = new Twig_Environment($loader);
+    $twig->addTokenParser(new CustomTokenParser());
+    $twig->addFilter('upper', new Twig_Filter_Function('strtoupper'));
 
 Anatomy of an Extension
 -----------------------
@@ -36,11 +47,11 @@ An extension is a class that implements the following interface:
       public function getTokenParsers();
 
       /**
-       * Returns the node transformer instances to add to the existing list.
+       * Returns the node visitor instances to add to the existing list.
        *
-       * @return array An array of Twig_NodeTransformer instances
+       * @return array An array of Twig_NodeVisitorInterface instances
        */
-      public function getNodeTransformers();
+      public function getNodeVisitors();
 
       /**
        * Returns a list of filters to add to the existing list.
@@ -148,8 +159,16 @@ a string. Here is an example of its usage and the expected output:
 
     {# should displays Gjvt #}
 
-Adding a filter in an extension means overriding the `getFilters()` method.
-This method must return an array of filters to add to the Twig environment:
+Adding a filter is as simple as calling the `addFilter` method of the
+`Twig_Environment` instance (new in Twig 0.9.7):
+
+    [php]
+    $twig = new Twig_Environment($loader);
+    $twig->addFilter('upper', new Twig_Filter_Function('strtoupper'));
+
+To add a filter to an extension, you need to override the `getFilters()`
+method. This method must return an array of filters to add to the Twig
+environment:
 
     [php]
     class Project_Twig_Extension extends Twig_Extension
@@ -481,22 +500,16 @@ The `Project_Set_Node` class itself is rather simple:
     [php]
     class Project_Set_Node extends Twig_Node
     {
-      protected $name;
-      protected $value;
-
       public function __construct($name, Twig_Node_Expression $value, $lineno)
       {
-        parent::__construct($lineno);
-
-        $this->name = $name;
-        $this->value = $value;
+        parent::__construct(array('value' => $value), array('name' => $name), $lineno);
       }
 
       public function compile($compiler)
       {
         $compiler
           ->addDebugInfo($this)
-          ->write('$context[\''.$this->name.'\'] = ')
+          ->write('$context[\''.$this['name'].'\'] = ')
           ->subcompile($this->value)
           ->raw(";\n")
         ;
@@ -533,7 +546,7 @@ developer generate beautiful and readable PHP code:
  * `outdent()`: Outdents the generated code (see `Twig_Node_Block` for a usage
    example).
 
-Creating a Node Transformer
----------------------------
+Creating a Node Visitor
+-----------------------
 
 To be written...

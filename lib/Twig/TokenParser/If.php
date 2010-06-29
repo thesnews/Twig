@@ -11,13 +11,20 @@
  */
 class Twig_TokenParser_If extends Twig_TokenParser
 {
+    /**
+     * Parses a token and returns a node.
+     *
+     * @param Twig_Token $token A Twig_Token instance
+     *
+     * @return Twig_NodeInterface A Twig_NodeInterface instance
+     */
     public function parse(Twig_Token $token)
     {
         $lineno = $token->getLine();
         $expr = $this->parser->getExpressionParser()->parseExpression();
         $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
         $body = $this->parser->subparse(array($this, 'decideIfFork'));
-        $tests = array(array($expr, $body));
+        $tests = array($expr, $body);
         $else = null;
 
         $end = false;
@@ -34,7 +41,8 @@ class Twig_TokenParser_If extends Twig_TokenParser
                         $expr = $this->parser->getExpressionParser()->parseExpression();
                         $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
                         $body = $this->parser->subparse(array($this, 'decideIfFork'));
-                        $tests[] = array($expr, $body);
+                        $tests[] = $expr;
+                        $tests[] = $body;
                         break;
 
                     case 'endif':
@@ -51,7 +59,7 @@ class Twig_TokenParser_If extends Twig_TokenParser
 
         $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
 
-        return new Twig_Node_If($tests, $else, $lineno, $this->getTag());
+        return new Twig_Node_If(new Twig_Node($tests), $else, $lineno, $this->getTag());
     }
 
     public function decideIfFork($token)
@@ -64,6 +72,11 @@ class Twig_TokenParser_If extends Twig_TokenParser
         return $token->test(array('endif'));
     }
 
+    /**
+     * Gets the tag name associated with this token parser.
+     *
+     * @param string The tag name
+     */
     public function getTag()
     {
         return 'if';

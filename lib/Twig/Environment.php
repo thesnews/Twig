@@ -11,7 +11,7 @@
 
 class Twig_Environment
 {
-    const VERSION = '0.9.7-DEV';
+    const VERSION = '0.9.9-DEV';
 
     protected $charset;
     protected $loader;
@@ -37,29 +37,32 @@ class Twig_Environment
      * Available options:
      *
      *  * debug: When set to `true`, the generated templates have a __toString()
-     *    method that you can use to display the generated nodes (default to
-     *    false).
+     *           method that you can use to display the generated nodes (default to
+     *           false).
      *
      *  * trim_blocks: Mimicks the behavior of PHP by removing the newline that
-     *    follows instructions if present (default to false).
+     *                 follows instructions if present (default to false).
      *
      *  * charset: The charset used by the templates (default to utf-8).
      *
      *  * base_template_class: The base template class to use for generated
-     *    templates (default to Twig_Template).
+     *                         templates (default to Twig_Template).
      *
-     *  * cache: Can be one of three values:
-     *             * false: disable the compilation cache (default)
-     *             * An absolute path where to store the compiled templates
+     *  * cache: An absolute path where to store the compiled templates, or
+     *           false to disable compilation cache (default)
      *
      *  * auto_reload: Whether to reload the template is the original source changed.
-     *    If you don't provide the auto_reload option, it will be
-     *    determined automatically base on the debug value.
+     *                 If you don't provide the auto_reload option, it will be
+     *                 determined automatically base on the debug value.
      *
-     *  * strict_variables: Whether to ignore invalid variables in templates (default to the opposite value of debug).
+     *  * strict_variables: Whether to ignore invalid variables in templates
+     *                      (default to false).
      *
-     * @param Twig_LoaderInterface $loader  A Twig_LoaderInterface instance
-     * @param array                $options An array of options
+     * @param Twig_LoaderInterface   $loader  A Twig_LoaderInterface instance
+     * @param array                  $options An array of options
+     * @param Twig_LexerInterface    $lexer   A Twig_LexerInterface instance
+     * @param Twig_ParserInterface   $parser  A Twig_ParserInterface instance
+     * @param Twig_CompilerInterface $compiler A Twig_CompilerInterface instance
      */
     public function __construct(Twig_LoaderInterface $loader = null, $options = array(), Twig_LexerInterface $lexer = null, Twig_ParserInterface $parser = null, Twig_CompilerInterface $compiler = null)
     {
@@ -77,7 +80,7 @@ class Twig_Environment
         $this->baseTemplateClass  = isset($options['base_template_class']) ? $options['base_template_class'] : 'Twig_Template';
         $this->autoReload         = isset($options['auto_reload']) ? (bool) $options['auto_reload'] : $this->debug;
         $this->extensions         = array('core' => new Twig_Extension_Core());
-        $this->strictVariables    = isset($options['strict_variables']) ? (bool) $options['strict_variables'] : $this->debug;
+        $this->strictVariables    = isset($options['strict_variables']) ? (bool) $options['strict_variables'] : false;
         $this->runtimeInitialized = false;
         if (isset($options['cache']) && $options['cache']) {
             $this->setCache($options['cache']);
@@ -144,7 +147,7 @@ class Twig_Environment
         $this->cache = $cache;
 
         if ($this->cache && !is_dir($this->cache)) {
-            mkdir($this->cache, 0755, true);
+            mkdir($this->cache, 0777, true);
         }
     }
 
@@ -178,7 +181,7 @@ class Twig_Environment
     /**
      * Loads a template by name.
      *
-     * @param  string $name The template name
+     * @param  string  $name  The template name
      *
      * @return Twig_TemplateInterface A template instance representing the given template name
      */
@@ -309,6 +312,10 @@ class Twig_Environment
 
     public function getExtension($name)
     {
+        if (!isset($this->extensions[$name])) {
+            throw new LogicException(sprintf('The "%s" extension is not enabled.', $name));
+        }
+
         return $this->extensions[$name];
     }
 
@@ -376,7 +383,7 @@ class Twig_Environment
         return $this->visitors;
     }
 
-    public function addFilter($name, Twig_NodeFilter $filter)
+    public function addFilter($name, Twig_FilterInterface $filter)
     {
         if (null === $this->filters) {
             $this->getFilters();

@@ -11,35 +11,16 @@
  */
 abstract class Twig_Node_Expression_Binary extends Twig_Node_Expression
 {
-    protected $left;
-    protected $right;
-
     public function __construct(Twig_NodeInterface $left, Twig_NodeInterface $right, $lineno)
     {
-        parent::__construct($lineno);
-        $this->left = $left;
-        $this->right = $right;
+        parent::__construct(array('left' => $left, 'right' => $right), array(), $lineno);
     }
 
-    public function __toString()
-    {
-        $repr = array(get_class($this).'(');
-
-        foreach (explode("\n", $this->left->__toString()) as $line) {
-            $repr[] = '  '.$line;
-        }
-
-        $repr[] = ', ';
-
-        foreach (explode("\n", $this->right->__toString()) as $line) {
-            $repr[] = '  '.$line;
-        }
-
-        $repr[] = ')';
-
-        return implode("\n", $repr);
-    }
-
+    /**
+     * Compiles the node to PHP.
+     *
+     * @param Twig_Compiler A Twig_Compiler instance
+     */
     public function compile($compiler)
     {
         $compiler

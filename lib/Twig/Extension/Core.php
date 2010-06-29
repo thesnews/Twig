@@ -34,16 +34,6 @@ class Twig_Extension_Core extends Twig_Extension
     }
 
     /**
-     * Returns the node visitor instances to add to the existing list.
-     *
-     * @return array An array of Twig_NodeVisitorInterface instances
-     */
-    public function getNodeVisitors()
-    {
-        return array(new Twig_NodeVisitor_Filter());
-    }
-
-    /**
      * Returns a list of filters to add to the existing list.
      *
      * @return array An array of filters
@@ -303,7 +293,7 @@ function twig_iterator_to_array($seq, $useKeys = true)
     if (is_array($seq)) {
         return $seq;
     } elseif (is_object($seq) && $seq instanceof Traversable) {
-        return $seq instanceof Countable ? $seq : iterator_to_array($seq, $useKeys);
+        return $seq;
     } else {
         return array();
     }
